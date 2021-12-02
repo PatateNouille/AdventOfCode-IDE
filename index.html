@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advent Of Code - Solv-Env</title>
+  
+  <script src="./ace-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+  
+  <style>
+    *{ box-sizing: border-box; margin: 0; }
+    
+    html, body {
+      font-family: monospace;
+    }
+    
+    .ace_editor .ace_content {
+      font-family: monospace;
+    }
+    
+    .workspace {
+      width: 100vw;
+      height: 100vh;
+      background-color: #0b0b0b;
+      
+      display: grid;
+      grid-template: 100% / 1fr 1fr 1fr 1fr ;
+    }
+    
+    .col {
+      grid-row: 1;
+      display: grid;
+      grid-template: 1fr 30px 30px 30px 1fr / 1fr 20px 1fr;
+    }
+    
+    .raw {
+      grid-column: 1;
+    }
+    
+    .input {
+      grid-column: 2;
+    }
+    
+    .data {
+      grid-column: 3;
+    }
+    
+    .console {
+      grid-column: 4;
+      grid-template-rows: 1fr 30px 30px 30px;
+    }
+    
+    .col > * {
+      margin: 4px;
+      grid-column: 1 / -1;
+    }
+    
+    .col .log {
+      grid-row: 1;
+    }
+    
+    .col .btn {
+      grid-row: 2;
+      background-color: #2f3546;
+      color: white;
+      border-color: #454a58;
+    }
+    
+    .col .btn:hover {
+      background-color: #525b73;
+      border-color: #80889e;
+    }
+    
+    .col .btn:active {
+      background-color: #14171f;
+      border-color: #313542;
+    }
+    
+    .col .btn:focus {
+      outline: none;
+    }
+    
+    .col .title {
+      grid-row: 3;
+      margin: 0;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+    }
+    
+    .col .IO {
+      grid-row: 4;
+      margin: 0;
+      text-align: center;
+    }
+    
+    .col .input {
+      grid-column: 1;
+      color: green;
+    }
+    
+    .col .output {
+      grid-column: 3;
+      color: darkred;
+    }
+    
+    .col .code {
+      grid-row: 5;
+    }
+
+    .col+.console .btn {
+      grid-row: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="workspace">
+    <div class="col raw">
+      <div   class="log"  id="rawLog" type="text"></div>
+      <input class="btn"  id="rawBtn" type="button" value="Format"/>
+      <pre   class="title">Raw Input</pre>
+      <pre   class="IO input">IN: text</pre>
+      <pre   class="IO output">OUT: formated</pre>
+      <div   class="code" id="rawCode"></div>
+    </div>
+    <div class="col input">
+      <div   class="log"  id="inputLog"></div>
+      <input class="btn"  id="inputBtn" type="button" value="To objects"/>
+      <pre   class="title">Formated Input</pre>
+      <pre   class="IO input">IN: formated</pre>
+      <pre   class="IO output">OUT: data</pre>
+      <div   class="code" id="inputCode"></div>
+    </div>
+    <div class="col data">
+      <div   class="log"  id="dataLog"></div>
+      <input class="btn"  id="dataBtn" type="button" value="Get result"/>
+      <pre   class="title">Data Objects</pre>
+      <pre   class="IO input">IN: data</pre>
+      <pre   class="IO output">OUT: output</pre>
+      <div   class="code" id="dataCode"></div>
+    </div>
+    <div class="col console">
+      <div   class="log"  id="console"></div>
+      <input class="btn"  id="clearBtn" type="button" value="Clear console"/>
+      <input class="btn"  id="saveBtn" type="button" value="Save board"/>
+      <input class="btn"  id="loadBtn" type="button" value="Load board ( /!\ overwrites current board /!\ )"/>
+    </div>
+  </div>
+  
+  
+  <script lang="text/javascript">
+    var makeEditor = function(id)
+    {
+      let editor = ace.edit(id);
+      editor.setTheme("ace/theme/twilight");
+      editor.session.setMode("ace/mode/javascript");
+      
+      return editor;
+    }
+    
+    var rawLog = makeEditor("rawLog");
+    var rawBtn = document.getElementById("rawBtn");
+    var rawCode = makeEditor("rawCode");
+    
+    var inputLog = makeEditor("inputLog");
+    inputLog.setReadOnly(true);
+    var inputBtn = document.getElementById("inputBtn");
+    var inputCode = makeEditor("inputCode");
+    
+    var dataLog = makeEditor("dataLog");
+    dataLog.setReadOnly(true);
+    var dataBtn = document.getElementById("dataBtn");
+    var dataCode = makeEditor("dataCode");
+    
+    var consoleLog = makeEditor("console");
+    consoleLog.renderer.setShowGutter(false);
+    consoleLog.setReadOnly(true);
+    var clearBtn = document.getElementById("clearBtn");
+
+    var saveBtn = document.getElementById("saveBtn");
+    var loadBtn = document.getElementById("loadBtn");
+    
+    
+    var text = "";
+    var formated = [];
+    var data = [];
+    var output = 0;
+    
+    
+
+    function CopyToClipboard(
+      value,
+      success = () => null,
+      failure = () => null)
+    {
+      const clipboard = navigator.clipboard;
+
+      if (clipboard !== undefined && clipboard !== "undefined")
+      {
+        navigator.clipboard.writeText(value).then(success, failure);
+      }
+      else
+      {
+        if (document.execCommand) {
+          const el = document.createElement("input");
+          el.value = value;
+          document.body.append(el);
+
+          el.select();
+          el.setSelectionRange(0, value.length);
+
+          if (document.execCommand("copy")) {
+            success();
+          }
+
+          el.remove();
+        }
+        else
+        {
+          failure();
+        }
+      }
+    };
+
+    function ReadFromClipboard(
+      success = () => null,
+      failure = () => null)
+    {
+      const clipboard = navigator.clipboard;
+
+      if (clipboard !== undefined && clipboard !== "undefined")
+      {
+        navigator.clipboard.readText().then(success, failure);
+      }
+      else
+      {
+        if (document.execCommand) {
+          const el = document.createElement("input");
+          document.body.append(el);
+
+          el.select();
+
+          if (document.execCommand("paste")) {
+            success(el.value);
+          }
+
+          el.remove();
+        }
+        else
+        {
+          failure();
+        }
+      }
+    };
+    
+    function ValueToString(val)
+    {
+      if (typeof val == "number" || typeof val == "string")
+        return "" + val;
+      else
+        return JSON.stringify(val, null, 2);
+    }
+
+    function Log(msg)
+    {
+      consoleLog.setValue(consoleLog.getValue() + ValueToString(msg) + '\n', true);
+    }
+    
+    
+    
+    rawBtn.onclick = function()
+    {
+      text = rawLog.getValue();
+      formated = [];
+      eval(rawCode.getValue());
+      inputLog.setValue(ValueToString(formated), true);
+    };
+    
+    inputBtn.onclick = function()
+    {
+      data = [];
+      eval(inputCode.getValue());
+      dataLog.setValue(ValueToString(data), true);
+    };
+    
+    dataBtn.onclick = function()
+    {
+      output = 0;
+      eval(dataCode.getValue());
+
+      Log("Output :");
+      Log(output);
+      Log("--------");
+    };
+
+
+
+    clearBtn.onclick = function()
+    {
+      consoleLog.setValue("", true);
+    }
+
+    saveBtn.onclick = function()
+    {
+      let state = {
+        version: 1,
+        rawCode: rawCode.getValue(),
+        inputCode: inputCode.getValue(),
+        dataCode: dataCode.getValue(),
+      };
+
+      CopyToClipboard(
+        JSON.stringify(state),
+        () => Log("\n//------------\n// Succesfully copied the current board into the clipboard !\n// Share the string to others for them to load this board !\n//------------\n"),
+        () => { Log("\n//------------\n// Error ! Could not copy the state to the clipboard, using alert instead...\n//------------\n"); alert(JSON.stringify(state)); }
+      );
+    }
+
+    loadBtn.onclick = function()
+    {
+      ReadFromClipboard
+      (
+        (state) => {
+          Log("\n//------------\n// Trying to load from clipboard :\n// '" + state);
+          state = JSON.parse(state);
+          Log("// Result :");
+          Log(state);
+          Log("//------------\n");
+
+          switch (state.version)
+          {
+            case 1:
+              {
+                rawCode.setValue(state.rawCode);
+                inputCode.setValue(state.inputCode);
+                dataCode.setValue(state.dataCode);
+              }
+          }
+        },
+        () => Log("\n//------------\n// Error ! Could not read from the clipboard\n//------------\n")
+      );
+    }
+  </script>
+</body>
+</html>
