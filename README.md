@@ -36,13 +36,13 @@ In general, the formatting is as simple as ``formated = text.split('\r\n');``. I
 
 ## 2 - Formated Input
 
-Once the input text has been broken up into formated chunks, it can be used to populate the IO var ``data`` with convinient objects for the puzzle at hand.
+Once the input text has been broken up into formated chunks, it can be used to populate the IO var ``data`` with convenient objects for the puzzle at hand.
 Usually either an array or a map is used to store these.
 
 ## 3 - Data Objects
 
 Here is the bulk of the puzzle, the actual algorithm that should result in the puzzle's answer.
-Using the previously made data objects should make the usage of the puzzle's input easy and convinient.
+Using the previously made data objects should make the usage of the puzzle's input easy and convenient.
 
 The IO var ``output`` (usually a number) should be set to the answer by the end of the 3rd step's code.
 It is also automatically printed in the custom console (not the browser's one).
